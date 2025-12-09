@@ -10,8 +10,8 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
-@Autonomous(name = "SimpleAuto - Pedro v2", group = "Examples")
-class SimpleAuto extends LinearOpMode {
+@Autonomous(name = "PushbotAuto", group = "Examples")
+public class PushbotAuto extends LinearOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {

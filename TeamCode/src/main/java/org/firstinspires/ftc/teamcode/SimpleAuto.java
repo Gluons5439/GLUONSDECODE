@@ -14,6 +14,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
  * Minimal PedroPathing v2 example autonomous.
  * Moves forward ~24 units (in whatever units your localizer uses; typically inches).
  */
+/*
 @Autonomous(name = "SimpleAuto - Pedro v2", group = "Examples")
 public class SimpleAutoA extends LinearOpMode {
     private Follower follower;
@@ -52,3 +53,4 @@ public class SimpleAutoA extends LinearOpMode {
         // follower.startTeleopDrive(); // if you want to return control to teleop-style drive
     }
 }
+*/
