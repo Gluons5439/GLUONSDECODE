@@ -367,7 +367,7 @@ public class trialMeet3Teleop extends OpMode {
     private boolean dpadUp2_was_pressed = false;
 
     // Transfer Servo 2 (Stopper/Gate Mechanism)
-    private Servo transferServo2;
+    private Servo StopperServo;
     private static final double STOPPER_DOWN_POS = 0.267;
     private static final double STOPPER_UP_POS = 0.05;
     private boolean stopper_is_up = false;
@@ -417,7 +417,7 @@ public class trialMeet3Teleop extends OpMode {
 
 // Initialize Transfer Servo 1 (Cycling)
         try {
-            transferServo = hardwareMap.get(Servo.class, "Transfer2");
+            transferServo = hardwareMap.get(Servo.class, "TransferServo");
             transferServo.setPosition(TRANSFER_DOWN_POS);
         } catch (Exception e) {
             telemetry.addData("Error", "Could not find transfer servo 1.");
@@ -425,10 +425,10 @@ public class trialMeet3Teleop extends OpMode {
 
 // Initialize Transfer Servo 2 (Stopper) <-- NEW INITIALIZATION
         try {
-            transferServo2 = hardwareMap.get(Servo.class, "transferServo2");
-            transferServo2.setPosition(STOPPER_DOWN_POS); // Start at 0.0 (Outwards/Open)
+            StopperServo = hardwareMap.get(Servo.class, "StopperServo");
+            StopperServo.setPosition(STOPPER_DOWN_POS); // Start at 0.0 (Outwards/Open)
         } catch (Exception e) {
-            telemetry.addData("Error", "Could not find transfer servo 2 (Stopper).");
+            telemetry.addData("Error", "Could not find Stopper Servo (Stopper).");
         }
 
 
@@ -530,7 +530,7 @@ public class trialMeet3Teleop extends OpMode {
 
 // --- TELEMETRY ---
         telemetry.addData("Drive Mode", "FIELD CENTRIC");
-        telemetry.addData("Stopper Pos (G1 Dpad Up)", transferServo2 != null ? transferServo2.getPosition() : "N/A");
+        telemetry.addData("Stopper Pos (G1 Dpad Up)", StopperServo != null ? StopperServo.getPosition() : "N/A");
         telemetry.addData("Transfer State (G2 Dpad Up)", currentTransferState.toString());
         telemetry.addData("Shooter Active (G2 B)", shooterActive);
         telemetry.addData("Robot Pose", follower != null ? follower.getPose() : "N/A");
@@ -700,7 +700,7 @@ public class trialMeet3Teleop extends OpMode {
 //  STOPPER CONTROL (GamePad1 Dpad Up - TOGGLE)
 
     private void handleStopperControl() {
-        if (transferServo2 == null) return;
+        if (StopperServo == null) return;
 
         boolean dpad_up_is_pressed = gamepad1.x; // Note: Uses Gamepad 1
 
@@ -710,9 +710,9 @@ public class trialMeet3Teleop extends OpMode {
 
             // Set the servo position based on the new state
             if (stopper_is_up) {
-                transferServo2.setPosition(STOPPER_UP_POS); // 0.5 (Closed/Up)
+                StopperServo.setPosition(STOPPER_UP_POS); // 0.5 (Closed/Up)
             } else {
-                transferServo2.setPosition(STOPPER_DOWN_POS); // 0.0 (Open/Down)
+                StopperServo.setPosition(STOPPER_DOWN_POS); // 0.0 (Open/Down)
             }
         }
 
@@ -729,6 +729,6 @@ public class trialMeet3Teleop extends OpMode {
         if (turretServo1 != null) turretServo1.setPower(0);
         if (turretServo2 != null) turretServo2.setPower(0);
         if (transferServo != null) transferServo.setPosition(TRANSFER_DOWN_POS);
-        if (transferServo2 != null) transferServo2.setPosition(STOPPER_DOWN_POS); // Stop the stopper
+        if (StopperServo != null) StopperServo.setPosition(STOPPER_DOWN_POS); // Stop the stopper
     }
 }
