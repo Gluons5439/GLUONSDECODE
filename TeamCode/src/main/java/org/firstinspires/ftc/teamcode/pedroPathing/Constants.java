@@ -16,13 +16,13 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
-            .mass(10.2)
-            .forwardZeroPowerAcceleration(-57.993047579814)
-            .lateralZeroPowerAcceleration(-63.779209488389306)
-            .translationalPIDFCoefficients(new PIDFCoefficients(0.24,0,0.0002,0.03))
-            .headingPIDFCoefficients(new PIDFCoefficients(2.8,0,0.00001,0.03))
-            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.225,0,0.0001,0.6,0.03))
-            .centripetalScaling(.0005)
+            .mass(10.97694)
+            .forwardZeroPowerAcceleration(-42.23134532680706)
+            .lateralZeroPowerAcceleration(-57.74291324890291)
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.18,0,0.0002,0.02))
+            .headingPIDFCoefficients(new PIDFCoefficients(2.8,0,0.00001,0.02))
+            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.225,0,0.0001,0.6,0.02))
+            .centripetalScaling(.0004)
             ;
     public static MecanumConstants driveConstants = new MecanumConstants()
             .maxPower(1)
@@ -34,19 +34,19 @@ public class Constants {
             .leftRearMotorDirection(DcMotorSimple.Direction.REVERSE)
             .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
             .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
-            .xVelocity(28.578804076187254)
-            .yVelocity(19.981489767239786);
+            .xVelocity(57.2650665523499)
+            .yVelocity(43.02874419445128);
     public static PinpointConstants localizerConstants = new PinpointConstants()
-            .forwardPodY(-104.250000034)
-            .strafePodX(-196.85)
+            .forwardPodY(-122.7066666/2.54)
+            .strafePodX(-188.31973/2.54)
             .distanceUnit(DistanceUnit.MM)
             .hardwareMapName("pinpoint")
             .customEncoderResolution(8192/(Math.PI * 35))
-            .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED)
+            .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
             .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
 
 
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
+    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1.4, 1);
 
     public static Follower createFollower(HardwareMap hardwareMap) {
         return new FollowerBuilder(followerConstants, hardwareMap)

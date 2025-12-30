@@ -1,279 +1,3 @@
-/**
-
-
-
-package org.firstinspires.ftc.teamcode;
-
-import com.bylazar.configurables.annotations.Configurable;
-import com.pedropathing.follower.Follower;
-import com.pedropathing.geometry.Pose;
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.util.Range;
-
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-
-@Configurable
-@TeleOp(name = "ExampleDecTeleop-FieldCentric")
-public class trialMeet3Teleop extends OpMode {
-
-    // --- Pedro Pathing V2 Variables ---
-    private Follower follower;
-    private final Pose startPose = new Pose(0, 0, 0);
-
-    // --- Turret System Variables (CR Simulation) ---
-    private Servo turretServo1;
-    private Servo turretServo2;
-    private double turretMovePower = 0.5;
-
-    // --- Shooter Variables ---
-    private DcMotor shooterMotor;
-    private DcMotor shooterMotor2;
-    private static final double SHOOTER_MAX_POWER = -2.0; // Corrected to max valid power
-    private boolean shooterActive = false;
-
-    // --- Intake Variables ---
-    private DcMotor intakeMotor;
-    private static final double INTAKE_POWER = -1.0;
-
-    // --- Toggle variables ---
-    private boolean b_was_pressed = false; // For shooter toggle
-
-    // --- Transfer Servo Variables ---
-    private Servo transferServo;
-    private static final double TRANSFER_DOWN_POS = 0.0; // Resting position
-    private static final double TRANSFER_UP_POS = 0.7;   // Eject/Pushing position
-
-    // State Machine Variables for Transfer/Indexing Cycle
-    private enum TransferState {
-        REST,
-        PUSHING,
-        RETURNING,
-        INTAKE_BURST
-    }
-    private TransferState currentTransferState = TransferState.REST;
-    private double pushStartTime = 0.0;
-    private static final double PUSH_DURATION_SECONDS = 0.300; // 300ms for transfer push
-    private double burstStartTime = 0.0;
-    private static final double INTAKE_BURST_DURATION = 0.200; // 200ms for intake indexing
-    private boolean dpadUp_was_pressed = false; // For single-click detection
-
-
-    @Override
-    public void init() {
-// --- PEDRO PATHING V2 INITIALIZATION ---
-        follower = Constants.createFollower(hardwareMap);
-        if (follower != null) {
-            follower.setStartingPose(startPose);
-            follower.update();
-        }
-
-// --- HARDWARE INITIALIZATION ---
-
-// Initialize Turret Servos (CR Servos)
-        try {
-            turretServo1 = hardwareMap.get(Servo.class, "turretServo1");
-            turretServo2 = hardwareMap.get(Servo.class, "turretServo2");
-            turretServo1.setPosition(turretMovePower);
-            turretServo2.setPosition(turretMovePower);
-        } catch (Exception e) {
-            telemetry.addData("Error", "Could not find turret servos.");
-        }
-
-// Initialize Transfer Servo
-        try {
-            transferServo = hardwareMap.get(Servo.class, "transferServo"); // Check this config name!
-            transferServo.setPosition(TRANSFER_DOWN_POS);
-        } catch (Exception e) {
-            telemetry.addData("Error", "Could not find transfer servo.");
-        }
-
-// Initialize Motors
-        try {
-            shooterMotor = hardwareMap.get(DcMotor.class, "shooterMotor");
-            shooterMotor2 = hardwareMap.get(DcMotor.class, "shooterMotor2");
-            intakeMotor = hardwareMap.get(DcMotor.class, "Intake");
-
-            // Set modes once for all
-            shooterMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-            shooterMotor2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-            intakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
-        } catch (Exception e) {
-            telemetry.addData("Error", "Could not find one or more motors (Shooter/Intake).");
-        }
-
-        telemetry.update();
-    }
-
-    @Override
-    public void start() {
-        if (follower != null) follower.startTeleopDrive();
-    }
-
-    @Override
-    public void loop() {
-// --- PEDRO PATHING V2 DRIVING (FIELD CENTRIC) ---
-        if (follower != null) {
-            follower.setTeleOpDrive(
-                    -gamepad1.left_stick_y,
-                    -gamepad1.left_stick_x,
-                    -gamepad1.right_stick_x,
-                    false
-            );
-            follower.update();
-        }
-
-// --- TURRET ACTION LOGIC (Continuous Rotation Servo) ---
-        handleTurretControl();
-
-// Apply the calculated 'power' position to the CR servos
-        if (turretServo1 != null && turretServo2 != null) {
-            turretServo1.setPosition(turretMovePower);
-            turretServo2.setPosition(turretMovePower);
-        }
-
-// --- MECHANISM CONTROL ---
-        handleShooterControl();     // Gamepad 2 B (Toggle)
-        handleIntakeControl();      // Gamepad 1 & 2 Bumpers (Manual)
-        handleTransferControl();    // Gamepad 2 Dpad Up (Timed Cycle)
-
-// --- TELEMETRY ---
-        telemetry.addData("Drive Mode", "FIELD CENTRIC");
-        telemetry.addData("Turret Power Pos", "%.3f", turretMovePower);
-        telemetry.addData("Shooter Active (B)", shooterActive);
-        telemetry.addData("Intake Control", "R/L Bumpers 1 & 2");
-        telemetry.addData("Transfer State", currentTransferState.toString());
-        telemetry.addData("Robot Pose", follower != null ? follower.getPose() : "N/A");
-
-        telemetry.update();
-    }
-
-    //
-// ---------- SHOOTER CONTROL (GamePad2 B - TOGGLE) ----------
-//
-    private void handleShooterControl() {
-        if (shooterMotor == null && shooterMotor2 == null) return;
-
-        boolean b_is_pressed = gamepad2.b;
-
-        if (b_is_pressed && !b_was_pressed) {
-            shooterActive = !shooterActive;
-        }
-        b_was_pressed = b_is_pressed;
-
-        double targetPower = shooterActive ? SHOOTER_MAX_POWER : 0.0;
-
-        if (shooterMotor != null) shooterMotor.setPower(targetPower);
-        if (shooterMotor2 != null) shooterMotor2.setPower(targetPower);
-    }
-
-
-    //
-// ---------- INTAKE CONTROL (GamePad1 & GamePad2 Bumpers) - MODIFIED ----------
-//
-    private void handleIntakeControl() {
-        if (intakeMotor == null) return;
-
-// Manual control will set power based on bumper press.
-// It relies on the transfer state machine to turn the motor off when resting.
-        boolean intakeForward = gamepad1.right_bumper || gamepad2.right_bumper;
-        boolean intakeReverse = gamepad1.left_bumper || gamepad2.left_bumper;
-
-        if (intakeForward) {
-            // Intake forward (Suck in)
-            intakeMotor.setPower(INTAKE_POWER);
-        } else if (intakeReverse) {
-            // Intake reverse (Outtake/Spit out)
-            intakeMotor.setPower(0.25);
-        }
-    }
-
-
-    //
-// ---------- MANUAL TURRET CONTROL (GamePad2 Left Stick X - CR SERVO) ----------
-//
-    private void handleTurretControl() {
-        double joystickInput = gamepad2.left_stick_x;
-        // Map joystick (-1.0 to 1.0) to CR servo range (0.0 to 1.0), where 0.5 is stop.
-        turretMovePower = (joystickInput + 1.0) / 2.0;
-        turretMovePower = Range.clip(turretMovePower, 0.0, 1.0);
-    }
-
-
-    //
-// ---------- TRANSFER CONTROL (GamePad2 Dpad Up - TIMED CYCLE with Intake) ----------
-//
-    private void handleTransferControl() {
-        if (transferServo == null) return;
-        if (intakeMotor == null) return; // Added check for intake motor since it's used here
-
-        boolean dpad_up_is_pressed = gamepad2.dpad_up;
-
-        switch (currentTransferState) {
-            case REST:
-                // Intake Motor Control: Turn motor off UNLESS manual bumper control is active
-                if (!gamepad1.right_bumper && !gamepad2.right_bumper &&
-                        !gamepad1.left_bumper && !gamepad2.left_bumper) {
-                    intakeMotor.setPower(0);
-                }
-
-                // Check for single-click input to start cycle
-                if (dpad_up_is_pressed && !dpadUp_was_pressed) {
-                    // Start PUSHING action
-                    transferServo.setPosition(TRANSFER_UP_POS);
-                    pushStartTime = getRuntime();
-                    currentTransferState = TransferState.PUSHING;
-                }
-                break;
-
-            case PUSHING:
-                // Wait for the push duration (0.300s) to expire
-                if (getRuntime() >= pushStartTime + PUSH_DURATION_SECONDS) {
-                    // Time is up, immediately move transfer servo down
-                    transferServo.setPosition(TRANSFER_DOWN_POS);
-                    currentTransferState = TransferState.RETURNING;
-                }
-                break;
-
-            case RETURNING:
-                // Servo is moving down. Immediately start the Intake Burst timer.
-                burstStartTime = getRuntime(); // Record the start of the burst
-                currentTransferState = TransferState.INTAKE_BURST;
-                break;
-
-            case INTAKE_BURST:
-                // Run the intake motor at max power for 0.200s
-                intakeMotor.setPower(INTAKE_POWER);
-
-                // Wait for the burst duration to expire
-                if (getRuntime() >= burstStartTime + INTAKE_BURST_DURATION) {
-                    // Time is up, stop the intake and return to REST
-                    intakeMotor.setPower(0);
-                    currentTransferState = TransferState.REST;
-                }
-                break;
-        }
-
-        // --- Update the single-click tracker ---
-        dpadUp_was_pressed = dpad_up_is_pressed;
-    }
-
-    @Override
-    public void stop() {
-// Stop all active mechanisms
-        if (shooterMotor != null) shooterMotor.setPower(0);
-        if (shooterMotor2 != null) shooterMotor2.setPower(0);
-        if (intakeMotor != null) intakeMotor.setPower(0);
-        if (turretServo1 != null) turretServo1.setPosition(0.5);
-        if (turretServo2 != null) turretServo2.setPosition(0.5);
-        if (transferServo != null) transferServo.setPosition(TRANSFER_DOWN_POS);
-    }
-}
-
- */
 
 
 
@@ -303,11 +27,13 @@ public class trialMeet3Teleop extends OpMode {
     // --- Pedro Pathing V2 Variables ---
     private Follower follower;
     private final double x = 8;
-    private final double y = 82;
+    private final double y = 66;
     private final Pose startPose = new Pose(x,y,0);
 
-    private final double xf = 133;
-    private final double yf = 15;
+    private final double xf = 120;
+    private final double yf = 0;
+    double dx;
+    double dy;
     // --- Turret System Variables (CR Simulation) ---
     private CRServo turretServo1;
     private CRServo turretServo2;
@@ -319,6 +45,8 @@ public class trialMeet3Teleop extends OpMode {
     double degrees = 0;
     double[] stepSizes = {10.0 , 1.0 , 0.1 , 0.01, 0.001};
     int stepIndex = 2;
+    private boolean autoTurretEnabled = true;   // start ON (change if you want)
+    private boolean x2_was_pressed = false;     // toggle button memory
 
     // --- Shooter Variables ---
     private DcMotorEx shooterMotor;
@@ -510,11 +238,21 @@ public class trialMeet3Teleop extends OpMode {
 
 
         }
+        boolean x2Pressed = gamepad2.x;
+
+        if (x2Pressed && !x2_was_pressed) {
+            autoTurretEnabled = !autoTurretEnabled;
+        }
+
+        x2_was_pressed = x2Pressed;
 
 
-// --- TURRET ACTION LOGIC (CR Servo) ---
-        handleTurretControl();
-        handleAutoTurretControl();
+// --- TURRET ACTION LOGIC  ---
+        if (autoTurretEnabled) {
+            handleAutoTurretControl();   // auto-correct aiming
+        } else {
+            handleTurretControl();       // manual joystick control
+        }
 
 // Apply the calculated 'power' position to the CR servos
             //turretServo1.setPower(-turretMovePower);
@@ -526,7 +264,6 @@ public class trialMeet3Teleop extends OpMode {
         handleShooterControl();     // Gamepad 2 B (Toggle)
         handleIntakeControl();      // Gamepad 1 & 2 Bumpers (Manual)
         handleTransferControl();    // Gamepad 2 Dpad Up (Timed Cycle)
-        handleStopperControl();     // Gamepad 1 Dpad Up (Toggle Stopper)
 
 // --- TELEMETRY ---
         telemetry.addData("Drive Mode", "FIELD CENTRIC");
@@ -544,10 +281,13 @@ public class trialMeet3Teleop extends OpMode {
         telemetry.addData("Tuning I", "%.4f (D-Pad U/D)", kI );
         telemetry.addData("Tuning F", "%.4f (D-Pad L/R)", kF );
         telemetry.addData("Step Size", "%.4f (B Button)", stepSizes[stepIndex]);
+        telemetry.addData("PoseX: ", dx);
+        telemetry.addData("PoseY: ", dy);
         telemetry.addData("PoseX: ", follower.getPose().getX());
         telemetry.addData("PoseY: ", follower.getPose().getY());
         telemetry.addData("Heading: ", follower.getHeading());
         telemetry.addData("EncoderTicks: ", turretMoveMotor.getCurrentPosition());
+        telemetry.addData("Atan2: ", Math.atan2(dy,dx)*(180/Math.PI));
 
         telemetry.update();
     }
@@ -556,7 +296,7 @@ public class trialMeet3Teleop extends OpMode {
 //  SHOOTER CONTROL (GamePad2 B - TOGGLE)
 //
     private void handleShooterControl() {
-        if (shooterMotor == null && shooterMotor2 == null) return;
+        if (shooterMotor == null || shooterMotor2 == null || StopperServo == null) return;
 
         boolean aPressed = gamepad2.a;
         boolean bPressed = gamepad2.b;
@@ -584,19 +324,25 @@ public class trialMeet3Teleop extends OpMode {
         a_was_pressed = aPressed;
         b_was_pressed = bPressed;
 
+        // ---- Shooter velocity ----
         double targetVelocity = 0.0;
-
         if (shooterActive) {
-            if (shooterMode == ShooterMode.CLOSE) {
-                targetVelocity = closeZoneTargetVelocity;
-            } else if (shooterMode == ShooterMode.FAR) {
-                targetVelocity = farZoneTargetVelocity;
-            }
+            targetVelocity = (shooterMode == ShooterMode.CLOSE)
+                    ? closeZoneTargetVelocity
+                    : farZoneTargetVelocity;
         }
 
         shooterMotor.setVelocity(targetVelocity);
         shooterMotor2.setVelocity(targetVelocity);
+
+        // ---- STOPPER LOGIC (NEW) ----
+        if (shooterActive) {
+            StopperServo.setPosition(STOPPER_UP_POS);     // open gate
+        } else {
+            StopperServo.setPosition(STOPPER_DOWN_POS);   // close gate
+        }
     }
+
 
 
 
@@ -623,13 +369,15 @@ public class trialMeet3Teleop extends OpMode {
 
     private void handleTurretControl() {
         double joystickInput = gamepad2.left_stick_x;
-        turretMovePower = (joystickInput*0.7);
+        turretMovePower = (joystickInput*500);
     }
 
+
+
     private void handleAutoTurretControl(){
-        double dx = xf-follower.getPose().getX();
-        double dy = (yf-follower.getPose().getY());
-        headingNeed = (Math.atan2(dx,dy) - follower.getHeading())*(180/Math.PI);
+        dx = xf-follower.getPose().getX();
+        dy = (144-yf)-(follower.getPose().getY());
+        headingNeed = (Math.atan2(dy,dx) - follower.getHeading())*(180/Math.PI);
         degrees = getAngle(turretMoveMotor.getCurrentPosition());
         error = headingNeed - degrees;
         integralSum += (error * timer.seconds());
@@ -697,28 +445,9 @@ public class trialMeet3Teleop extends OpMode {
 
 
 
-//  STOPPER CONTROL (GamePad1 Dpad Up - TOGGLE)
 
-    private void handleStopperControl() {
-        if (StopperServo == null) return;
 
-        boolean dpad_up_is_pressed = gamepad1.x; // Note: Uses Gamepad 1
 
-        if (dpad_up_is_pressed && !dpadUp1_was_pressed) {
-            // Toggle the state
-            stopper_is_up = !stopper_is_up;
-
-            // Set the servo position based on the new state
-            if (stopper_is_up) {
-                StopperServo.setPosition(STOPPER_UP_POS); // 0.5 (Closed/Up)
-            } else {
-                StopperServo.setPosition(STOPPER_DOWN_POS); // 0.0 (Open/Down)
-            }
-        }
-
-        // Update the button tracker
-        dpadUp1_was_pressed = dpad_up_is_pressed;
-    }
 
     @Override
     public void stop() {
@@ -732,3 +461,4 @@ public class trialMeet3Teleop extends OpMode {
         if (StopperServo != null) StopperServo.setPosition(STOPPER_DOWN_POS); // Stop the stopper
     }
 }
+
