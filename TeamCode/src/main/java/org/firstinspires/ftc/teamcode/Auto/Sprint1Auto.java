@@ -1,28 +1,25 @@
 package org.firstinspires.ftc.teamcode.Auto;
 
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap;
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.opMode;
-
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
-import com.qualcomm.robotcore.hardware.CRServo;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-
-import java.nio.file.Paths;
 
 @Autonomous(name = "Sprint1", group = "Examples")
 public class Sprint1Auto extends OpMode {
     private Follower follower;
     private Timer pathTimer, opModeTimer;
+
+    private Servo StopperServo;
+    private static final double STOPPER_DOWN_POS = 0.267;
+    private static final double STOPPER_UP_POS = 0.05;
 
     public enum PathState{
         DRIVE_STARTPOSE,
@@ -67,6 +64,8 @@ public class Sprint1Auto extends OpMode {
     @Override
     public void init()
     {
+        StopperServo = hardwareMap.get(Servo.class, "StopperServo");
+        StopperServo.setPosition(STOPPER_UP_POS);
         pathState = PathState.DRIVE_STARTPOSE;
         pathTimer = new Timer();
         opModeTimer = new Timer();
@@ -84,6 +83,12 @@ public class Sprint1Auto extends OpMode {
     {
         follower.update();
         statePathUpdate();
+
+        telemetry.addData("Path state: ", pathState.toString());
+        telemetry.addData("x", follower.getPose().getX());
+        telemetry.addData("y", follower.getPose().getY());
+
+
     }
 
 }
