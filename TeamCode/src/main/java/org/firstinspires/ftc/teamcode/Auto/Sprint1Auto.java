@@ -10,6 +10,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 
+import org.firstinspires.ftc.teamcode.Auto.Mechanisms.FlyWheelLogic;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 @Autonomous(name = "Sprint1", group = "Examples")
@@ -21,6 +22,7 @@ public class Sprint1Auto extends OpMode {
     private static final double STOPPER_DOWN_POS = 0.267;
     private static final double STOPPER_UP_POS = 0.05;
 
+
     public enum PathState{
         DRIVE_STARTPOSE,
         SHOOT_PRELOAD
@@ -29,6 +31,8 @@ public class Sprint1Auto extends OpMode {
     private final Pose startPose = new Pose(66, 8, Math.toRadians(90));
     private final Pose shootPose = new Pose(66, 18, Math.toRadians(90));
     private PathChain driveToPreLoadShoot;
+    private FlyWheelLogic shooter = new FlyWheelLogic();
+    private boolean shotsTriggered = false;
 
     public void buildPaths() {
         driveToPreLoadShoot = follower.pathBuilder()
@@ -47,6 +51,15 @@ public class Sprint1Auto extends OpMode {
             case SHOOT_PRELOAD:
                 if(!follower.isBusy()){
                     telemetry.addLine("path 1 done");
+                    if(!shotsTriggered)
+                    {
+                        shooter.fireShots(3);
+                        shotsTriggered = true;
+                    }
+                    else if (shotsTriggered && !shooter.isBusy())
+                    {
+                        telemetry.addLine("Done all Paths!");
+                    }
                 }
                 break;
             default:
@@ -59,6 +72,8 @@ public class Sprint1Auto extends OpMode {
     {
         pathState = newState;
         pathTimer.resetTimer();
+
+        shotsTriggered =false;
 
     }
     @Override
@@ -83,6 +98,7 @@ public class Sprint1Auto extends OpMode {
     {
         follower.update();
         statePathUpdate();
+        shooter.update();
 
         telemetry.addData("Path state: ", pathState.toString());
         telemetry.addData("x", follower.getPose().getX());
