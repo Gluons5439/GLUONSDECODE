@@ -29,7 +29,7 @@ public class trialMeet3Teleop extends OpMode {
     private Follower follower;
     private final double x = 8;
     private final double y = 66;
-    private final Pose startPose = new Pose(x,y,0);
+    private final Pose startPose = new Pose(x,y,(Math.PI/2));
 
     private final double xf = 120;
     private final double yf = 0;
@@ -39,7 +39,7 @@ public class trialMeet3Teleop extends OpMode {
     private CRServo turretServo1;
     private CRServo turretServo2;
     private double turretMovePower = 0.2;
-    private double kP = 0, kI = 0.00, kD = 0, kF = 0;
+    private double kP = 28, kI = 0.05, kD = 2, kF = 0;
     private PIDController turretController;
     private double error = 0, integralSum =0, derivative =0;
     private DcMotorEx turretMoveMotor;
@@ -109,11 +109,6 @@ public class trialMeet3Teleop extends OpMode {
     @Override
     public void init() {
 
-        follower = Constants.createFollower(hardwareMap);
-        if (follower != null) {
-            follower.setStartingPose(startPose);
-            follower.update();
-        }
 
 
 
@@ -131,7 +126,7 @@ public class trialMeet3Teleop extends OpMode {
             turretMoveMotor.setTargetPosition(0);
             // Create FTCLib PIDF controller
             turretController = new PIDController(kP, kI, kD);
-            turretController.setTolerance(1); // 2 degree tolerance
+            turretController.setTolerance(0.5,1); // 2 degree tolerance
             //turretMoveMotor.setPower(0); // see if this is okay
            // turretMoveMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
@@ -179,6 +174,11 @@ public class trialMeet3Teleop extends OpMode {
 
         } catch (Exception e) {
             telemetry.addData("Error", "Could not find one or more motors (Shooter/Intake).");
+        }
+        follower = Constants.createFollower(hardwareMap);
+        if (follower != null) {
+            follower.setStartingPose(startPose);
+            follower.update();
         }
 
         telemetry.update();
@@ -375,65 +375,28 @@ public class trialMeet3Teleop extends OpMode {
     private void handleTurretControl() {
         double joystickInput = gamepad2.left_stick_x;
         turretMovePower = (joystickInput*500);
-
-        turretController.reset();
     }
 
 
 
     private void handleAutoTurretControl(){
-        /**
         dx = xf-follower.getPose().getX();
         dy = (144-yf)-(follower.getPose().getY());
-        headingNeed = (Math.atan2(dy,dx) - follower.getHeading())*(180/Math.PI);
+        headingNeed = (Math.atan2(dy,dx) - follower.getHeading()) * 180/Math.PI;
         degrees = getAngle(turretMoveMotor.getCurrentPosition());
         error = headingNeed - degrees;
         integralSum += (error * timer.seconds());
         derivative = (error - lastError);
         // kF compensates for gravity or friction at target velocity
-        double feedforward = kF * Math.signum(error); // Direction-based
+        //double feedforward = kF * Math.signum(error); // Direction-based
         turretMovePower = (kP * error) + (kI * integralSum) + (kD * derivative);
         lastError = error;
         timer.reset();
-         **/
-
-        // Calculate target heading based on field position
-        dx = xf - follower.getPose().getX();
-        dy = (144 - yf) - (follower.getPose().getY());
-        headingNeed = (Math.atan2(dy, dx) - follower.getHeading());
-
-        // Get current turret angle
-        degrees = getAngle(turretMoveMotor.getCurrentPosition());
-
-        // Set the target (setpoint) for the controller
-        turretController.setSetPoint(wrapToPi(headingNeed));
-
-        // Calculate output using FTCLib's PIDF controller
-        // This handles P, I, D, and F calculations automatically with proper timing
-        while (!turretController.atSetPoint()) {
-            turretMovePower = turretController.calculate(degrees);
-        }
-        // Clip to reasonable limits
-        turretMovePower = Range.clip(turretMovePower, -2000, 2000);
     }
-    private boolean turretAtTarget() {
-        return turretController.atSetPoint();
-    }
-    public static double wrapToPi(double radians) {
-        double twoPi = 2 * Math.PI;
-        double result = radians % twoPi;
 
-        if (result <= -Math.PI) {
-            result += twoPi;
-        } else if (result > Math.PI) {
-            result -= twoPi;
-        }
-
-        return result;
-    }
     public double getAngle(double encoderPosition)
     {
-        double kV = 963/Math.PI;
+        double kV = 963/180;
         return encoderPosition/kV;
     }
 
