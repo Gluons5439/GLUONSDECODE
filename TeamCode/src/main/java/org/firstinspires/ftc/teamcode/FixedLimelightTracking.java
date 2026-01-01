@@ -1,3 +1,6 @@
+
+
+
 package org.firstinspires.ftc.teamcode;
 
 import com.bylazar.configurables.annotations.Configurable;
@@ -16,126 +19,99 @@ import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 @Configurable
-@TeleOp(name = "Working-LimelightTracking")
+@TeleOp(name = "Limelight + Transfer")
 public class FixedLimelightTracking extends OpMode {
 
-    // --- Pedro Pathing V2 Variables ---
+    // --- Pedro Pathing ---
     private Follower follower;
-    private final double x = 8;
-    private final double y = 66;
-    private final Pose startPose = new Pose(x,y,0);
+    private final Pose startPose = new Pose(8, 66, 0);
 
-    // ==================== LIMELIGHT ====================
+    // --- Limelight ---
     private Limelight3A limelight;
-    private LLResult limelightResult;
+    public static double AUTO_AIM_K = 25.0;        // ticks/sec per deg
+    public static double MAX_TURRET_VEL = 800.0;   // ticks/sec
+    public static double LIMELIGHT_DEADBAND = 0.8; // deg
 
-    public enum Alliance { RED, BLUE }
-    public static Alliance ALLIANCE = Alliance.RED;
-
-    private static final int RED_TAG_ID = 24;
-    private static final int BLUE_TAG_ID = 20;
-
-    // Vision PD gains - MATCHING WORKING CODE
-    public static double visionKP = 0.05;
-    public static double visionKD = 0.0002;
-
-    public static double FAR_DISTANCE_THRESHOLD = 50.0;
-    public static double FURTHER_CORRECTION = 3.0;
-
-    // ==================== TURRET ====================
+    // --- Turret ---
     private DcMotorEx turretMoveMotor;
-
-    // Motor PID gains - MUCH LOWER LIKE WORKING CODE
-    public static double kP = 0.015;  // Was 28 - way too high!
-    public static double kD = 0.0008; // Was 2 - too high!
-    public static double kF = 0.0;
-
-    private static final double COUNTS_PER_REV = 537.7;
-    private static final double COUNTS_PER_DEGREE = COUNTS_PER_REV / 360.0;
-
-    public static double MAX_POWER = 0.8;  // Using power not velocity
-    public static double MIN_ANGLE = -110;
-    public static double MAX_ANGLE = 110;
-
-    public static double TARGET_TOLERANCE = 2.0;
-
-    private double targetAngle = 0;
-    private double currentAngle = 0;
-    private double turretPower = 0;
-
-    // Timing variables
-    private double lastTime = 0;
-    private double period = 0;
-
-    private double lastError = 0;
-
-    private double visionLastTime = 0;
-    private double visionPeriod = 0;
-    private double visionLastError = 0;
-
+    private double turretMoveVelocity = 0;
     private boolean autoTurretEnabled = true;
     private boolean x2_was_pressed = false;
 
-    // --- Shooter / Intake / Transfer ---
+    // --- Shooter ---
     private DcMotorEx shooterMotor;
     private DcMotorEx shooterMotor2;
-    private DcMotor intakeMotor;
+    private enum ShooterMode {CLOSE, FAR}
+    private ShooterMode shooterMode = ShooterMode.CLOSE;
+    private boolean shooterActive = false;
+    public static double closeZoneTargetVelocity = 1800;
+    public static double farZoneTargetVelocity = 2100;
+    private boolean a_was_pressed = false;
+    private boolean b_was_pressed = false;
 
+    // --- Intake ---
+    private DcMotor intakeMotor;
+    private static final double INTAKE_POWER = -1.0;
+
+    // --- Transfer ---
     private Servo transferServo;
     private Servo StopperServo;
-
     private static final double TRANSFER_DOWN_POS = 0.5;
     private static final double TRANSFER_UP_POS = 0.85;
     private static final double STOPPER_DOWN_POS = 0.267;
     private static final double STOPPER_UP_POS = 0.05;
 
+    private enum TransferState {REST, PUSHING, RETURNING, INTAKE_BURST}
+    private TransferState currentTransferState = TransferState.REST;
+    private double pushStartTime = 0.0;
+    private static final double PUSH_DURATION_SECONDS = 0.300;
+    private double burstStartTime = 0.0;
+    private static final double INTAKE_BURST_DURATION = 0.250;
+    private boolean dpadUp2_was_pressed = false;
+
     @Override
     public void init() {
-
         follower = Constants.createFollower(hardwareMap);
-        if (follower != null) {
+        if(follower != null){
             follower.setStartingPose(startPose);
             follower.update();
         }
 
-        // CRITICAL: Use correct motor name and setup like working code
-        turretMoveMotor = hardwareMap.get(DcMotorEx.class, "turretMotor"); // Changed from "turretMotor"
-        turretMoveMotor.setDirection(DcMotorSimple.Direction.REVERSE); // Working code uses REVERSE
+        turretMoveMotor = hardwareMap.get(DcMotorEx.class,"turretMotor");
+        turretMoveMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         turretMoveMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        turretMoveMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER); // Changed from RUN_USING_ENCODER
+        turretMoveMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         turretMoveMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        limelight = hardwareMap.get(Limelight3A.class,"limelight");
         limelight.setPollRateHz(100);
-        limelight.start();
         limelight.pipelineSwitch(0);
+        limelight.start();
 
-        shooterMotor = hardwareMap.get(DcMotorEx.class, "shooterMotor");
-        shooterMotor2 = hardwareMap.get(DcMotorEx.class, "shooterMotor2");
-        intakeMotor = hardwareMap.get(DcMotor.class, "Intake");
+        shooterMotor = hardwareMap.get(DcMotorEx.class,"shooterMotor");
+        shooterMotor2 = hardwareMap.get(DcMotorEx.class,"shooterMotor2");
+        shooterMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+        shooterMotor2.setDirection(DcMotorSimple.Direction.FORWARD);
 
-        transferServo = hardwareMap.get(Servo.class, "TransferServo");
-        StopperServo = hardwareMap.get(Servo.class, "StopperServo");
+        intakeMotor = hardwareMap.get(DcMotor.class,"Intake");
+        intakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        transferServo = hardwareMap.get(Servo.class,"TransferServo");
+        StopperServo = hardwareMap.get(Servo.class,"StopperServo");
 
         transferServo.setPosition(TRANSFER_DOWN_POS);
         StopperServo.setPosition(STOPPER_DOWN_POS);
-
-        // Initialize timing
-        lastTime = System.nanoTime() / 1E9;
-        visionLastTime = lastTime;
     }
 
     @Override
-    public void start() {
-        if (follower != null) follower.startTeleopDrive();
-        lastTime = System.nanoTime() / 1E9;
-        visionLastTime = lastTime;
+    public void start(){
+        if(follower != null) follower.startTeleopDrive();
     }
 
     @Override
-    public void loop() {
-
-        if (follower != null) {
+    public void loop(){
+        // --- Drive ---
+        if(follower != null){
             follower.setTeleOpDrive(
                     -gamepad1.left_stick_y,
                     -gamepad1.left_stick_x,
@@ -145,146 +121,111 @@ public class FixedLimelightTracking extends OpMode {
             follower.update();
         }
 
-        // Toggle auto turret with X button
+        // --- Toggle auto turret ---
         boolean x2Pressed = gamepad2.x;
-        if (x2Pressed && !x2_was_pressed) {
-            autoTurretEnabled = !autoTurretEnabled;
-            lastError = 0;
-            visionLastError = 0;
-            lastTime = System.nanoTime() / 1E9;
-            visionLastTime = lastTime;
-        }
+        if(x2Pressed && !x2_was_pressed) autoTurretEnabled = !autoTurretEnabled;
         x2_was_pressed = x2Pressed;
 
-        if (autoTurretEnabled) {
-            handleAutoTurretControl();
-        } else {
-            handleManualTurretControl();
-        }
+        // --- Turret ---
+        if(autoTurretEnabled) handleAutoTurretControl();
+        else handleManualTurretControl();
+        turretMoveMotor.setVelocity(turretMoveVelocity);
 
-        // Use setPower() not setVelocity()
-        turretMoveMotor.setPower(turretPower);
+        // --- Mechanisms ---
+        handleShooterControl();
+        handleTransferControl();
+        handleIntakeControl();
 
-        // Telemetry
-        telemetry.addData("=== TURRET STATUS ===", "");
-        telemetry.addData("Auto Turret", autoTurretEnabled ? "ENABLED" : "MANUAL");
-        telemetry.addData("Current Angle", "%.2f°", currentAngle);
-        telemetry.addData("Target Angle", "%.2f°", targetAngle);
-        telemetry.addData("Error", "%.2f°", targetAngle - currentAngle);
-        telemetry.addData("Power", "%.2f", turretPower);
-        telemetry.addData("At Target", Math.abs(targetAngle - currentAngle) < TARGET_TOLERANCE);
-
-        telemetry.addData("=== LIMELIGHT ===", "");
-        if (limelightResult != null && limelightResult.isValid()) {
-            telemetry.addData("Target", "LOCKED");
-            telemetry.addData("TX (offset)", "%.2f", limelightResult.getTx());
-            telemetry.addData("TA (area)", "%.2f", limelightResult.getTa());
-            if (!limelightResult.getFiducialResults().isEmpty()) {
-                telemetry.addData("Tag ID", limelightResult.getFiducialResults().get(0).getFiducialId());
-            }
-        } else {
-            telemetry.addData("Target", "SEARCHING");
-        }
-
+        // --- Telemetry ---
+        telemetry.addData("Auto Turret", autoTurretEnabled);
+        telemetry.addData("Turret Vel", turretMoveVelocity);
+        telemetry.addData("Transfer State", currentTransferState);
+        telemetry.addData("Shooter Active", shooterActive);
         telemetry.update();
     }
 
-    // ==================== AUTO TURRET (LIMELIGHT) ====================
+    // --- Auto Turret ---
+    private void handleAutoTurretControl(){
+        LLResult limelightResult = limelight.getLatestResult();
+        if(limelightResult == null || !limelightResult.isValid()){ turretMoveVelocity = 0; return; }
 
-    private void handleAutoTurretControl() {
+        double tx = limelightResult.getTx();
+        if(Math.abs(tx) < LIMELIGHT_DEADBAND){ turretMoveVelocity = 0; return; }
 
-        // 1. UPDATE LIMELIGHT
-        limelightResult = limelight.getLatestResult();
-
-        // 2. READ CURRENT POSITION
-        int encoderPosition = turretMoveMotor.getCurrentPosition();
-        currentAngle = encoderPosition / COUNTS_PER_DEGREE;
-
-        // 3. PROCESS VISION AND ADJUST TARGET
-        if (hasValidTarget()) {
-            double tx = limelightResult.getTx();
-            double ta = limelightResult.getTa();
-
-            double correctedTX = applyDistanceCorrection(tx, ta);
-
-            // Vision PD with proper timing
-            double visionError = correctedTX;
-
-            double currentTime = System.nanoTime() / 1E9;
-            visionPeriod = currentTime - visionLastTime;
-            visionLastTime = currentTime;
-
-            // Calculate derivative (delta / time)
-            double visionDerivative = 0;
-            if (visionPeriod > 1E-6) {
-                visionDerivative = (visionError - visionLastError) / visionPeriod;
-            }
-
-            double adjustment = (visionKP * visionError) + (visionKD * visionDerivative);
-
-            targetAngle -= adjustment;  // Subtract like working code
-            visionLastError = visionError;
-
-        } else {
-            visionLastError = 0;
-            visionLastTime = System.nanoTime() / 1E9;
-        }
-
-        // 4. LIMIT TARGET
-        targetAngle = Range.clip(targetAngle, MIN_ANGLE, MAX_ANGLE);
-
-        // 5. MAIN PID WITH PROPER TIMING
-        double error = targetAngle - currentAngle;
-
-        double currentTime = System.nanoTime() / 1E9;
-        period = currentTime - lastTime;
-        lastTime = currentTime;
-
-        // Calculate derivative (delta / time)
-        double derivative = 0;
-        if (period > 1E-6) {
-            derivative = (error - lastError) / period;
-        }
-
-        turretPower = (kP * error) + (kD * derivative) + kF;
-        turretPower = Range.clip(turretPower, -MAX_POWER, MAX_POWER);
-
-        lastError = error;
+        turretMoveVelocity = Range.clip(AUTO_AIM_K * tx, -MAX_TURRET_VEL, MAX_TURRET_VEL);
     }
 
-    private void handleManualTurretControl() {
-        int encoderPosition = turretMoveMotor.getCurrentPosition();
-        currentAngle = encoderPosition / COUNTS_PER_DEGREE;
-
-        // Manual control with joystick
-        turretPower = -gamepad2.left_stick_x * MAX_POWER;
-
-        // Update target to follow current position
-        targetAngle = currentAngle;
-
-        // Reset control states
-        lastError = 0;
-        visionLastError = 0;
-        lastTime = System.nanoTime() / 1E9;
-        visionLastTime = lastTime;
+    private void handleManualTurretControl(){
+        turretMoveVelocity = gamepad2.left_stick_x * MAX_TURRET_VEL;
     }
 
-    private boolean hasValidTarget() {
-        if (limelightResult == null || !limelightResult.isValid()) return false;
-        if (limelightResult.getFiducialResults().isEmpty()) return false;
+    // --- Shooter ---
+    private void handleShooterControl(){
+        boolean aPressed = gamepad2.a;
+        boolean bPressed = gamepad2.b;
 
-        int id = limelightResult.getFiducialResults().get(0).getFiducialId();
-
-        return (ALLIANCE == Alliance.RED && id == RED_TAG_ID) ||
-                (ALLIANCE == Alliance.BLUE && id == BLUE_TAG_ID);
-    }
-
-    private double applyDistanceCorrection(double tx, double ta) {
-        if (ta < FAR_DISTANCE_THRESHOLD) {
-            return (ALLIANCE == Alliance.RED)
-                    ? tx + FURTHER_CORRECTION
-                    : tx - FURTHER_CORRECTION;
+        if(bPressed && !b_was_pressed){
+            shooterActive = !(shooterActive && shooterMode == ShooterMode.CLOSE);
+            shooterMode = ShooterMode.CLOSE;
         }
-        return tx;
+        if(aPressed && !a_was_pressed){
+            shooterActive = !(shooterActive && shooterMode == ShooterMode.FAR);
+            shooterMode = ShooterMode.FAR;
+        }
+        a_was_pressed = aPressed;
+        b_was_pressed = bPressed;
+
+        double targetVelocity = shooterActive ? (shooterMode == ShooterMode.CLOSE ? closeZoneTargetVelocity : farZoneTargetVelocity) : 0;
+        shooterMotor.setVelocity(targetVelocity);
+        shooterMotor2.setVelocity(targetVelocity);
+
+        StopperServo.setPosition(shooterActive ? STOPPER_UP_POS : STOPPER_DOWN_POS);
+    }
+
+    // --- Intake ---
+    private void handleIntakeControl(){
+        double intakePower = 0;
+        if(gamepad1.right_bumper || gamepad2.right_bumper) intakePower = INTAKE_POWER;
+        else if(gamepad1.left_bumper || gamepad2.left_bumper) intakePower = 0.25;
+
+        // Override during transfer burst
+        if(currentTransferState == TransferState.INTAKE_BURST) intakePower = INTAKE_POWER;
+
+        intakeMotor.setPower(intakePower);
+    }
+
+    // --- Transfer ---
+    private void handleTransferControl(){
+        boolean dpad_up_pressed = gamepad2.y;
+
+        switch(currentTransferState){
+            case REST:
+                if(dpad_up_pressed && !dpadUp2_was_pressed){
+                    transferServo.setPosition(TRANSFER_UP_POS);
+                    pushStartTime = getRuntime();
+                    currentTransferState = TransferState.PUSHING;
+                }
+                break;
+
+            case PUSHING:
+                if(getRuntime() >= pushStartTime + PUSH_DURATION_SECONDS){
+                    transferServo.setPosition(TRANSFER_DOWN_POS);
+                    currentTransferState = TransferState.RETURNING;
+                }
+                break;
+
+            case RETURNING:
+                burstStartTime = getRuntime();
+                currentTransferState = TransferState.INTAKE_BURST;
+                break;
+
+            case INTAKE_BURST:
+                if(getRuntime() >= burstStartTime + INTAKE_BURST_DURATION){
+                    currentTransferState = TransferState.REST;
+                }
+                break;
+        }
+
+        dpadUp2_was_pressed = dpad_up_pressed;
     }
 }

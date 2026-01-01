@@ -3,7 +3,9 @@
 
 package org.firstinspires.ftc.teamcode;
 
+import com.arcrobotics.ftclib.controller.PIDController;
 import com.bylazar.configurables.annotations.Configurable;
+import com.pedropathing.control.PIDFController;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -11,7 +13,6 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.PIDCoefficients;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -38,7 +39,8 @@ public class trialMeet3Teleop extends OpMode {
     private CRServo turretServo1;
     private CRServo turretServo2;
     private double turretMovePower = 0.2;
-    private double kP = 28, kI = 0.05, kD = 2, kF = 7;
+    private double kP = 0, kI = 0.00, kD = 0, kF = 0;
+    private PIDController turretController;
     private double error = 0, integralSum =0, derivative =0;
     private DcMotorEx turretMoveMotor;
     double headingNeed = 0;
@@ -124,11 +126,12 @@ public class trialMeet3Teleop extends OpMode {
            // turretServo2.setDirection(DcMotorSimple.Direction.REVERSE);
             turretMoveMotor = hardwareMap.get(DcMotorEx.class, "turretMotor");
             turretMoveMotor.setDirection(DcMotorSimple.Direction.FORWARD);
-            PIDFCoefficients pidfCoefficientsTurret = new PIDFCoefficients(kP,kI,kD,kF);
-            turretMoveMotor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfCoefficientsTurret);
             turretMoveMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
             turretMoveMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
             turretMoveMotor.setTargetPosition(0);
+            // Create FTCLib PIDF controller
+            turretController = new PIDController(kP, kI, kD);
+            turretController.setTolerance(1); // 2 degree tolerance
             //turretMoveMotor.setPower(0); // see if this is okay
            // turretMoveMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
@@ -288,6 +291,8 @@ public class trialMeet3Teleop extends OpMode {
         telemetry.addData("Heading: ", follower.getHeading());
         telemetry.addData("EncoderTicks: ", turretMoveMotor.getCurrentPosition());
         telemetry.addData("Atan2: ", Math.atan2(dy,dx)*(180/Math.PI));
+        telemetry.addData("shooter: ", shooterMotor.getCurrentPosition());
+        telemetry.addData("shooter2: ", shooterMotor2.getCurrentPosition());
 
         telemetry.update();
     }
@@ -370,11 +375,14 @@ public class trialMeet3Teleop extends OpMode {
     private void handleTurretControl() {
         double joystickInput = gamepad2.left_stick_x;
         turretMovePower = (joystickInput*500);
+
+        turretController.reset();
     }
 
 
 
     private void handleAutoTurretControl(){
+        /**
         dx = xf-follower.getPose().getX();
         dy = (144-yf)-(follower.getPose().getY());
         headingNeed = (Math.atan2(dy,dx) - follower.getHeading())*(180/Math.PI);
@@ -382,15 +390,50 @@ public class trialMeet3Teleop extends OpMode {
         error = headingNeed - degrees;
         integralSum += (error * timer.seconds());
         derivative = (error - lastError);
-
-        turretMovePower = (kP * error) + (kI*integralSum) + (kD * derivative);
+        // kF compensates for gravity or friction at target velocity
+        double feedforward = kF * Math.signum(error); // Direction-based
+        turretMovePower = (kP * error) + (kI * integralSum) + (kD * derivative);
         lastError = error;
         timer.reset();
-    }
+         **/
 
+        // Calculate target heading based on field position
+        dx = xf - follower.getPose().getX();
+        dy = (144 - yf) - (follower.getPose().getY());
+        headingNeed = (Math.atan2(dy, dx) - follower.getHeading());
+
+        // Get current turret angle
+        degrees = getAngle(turretMoveMotor.getCurrentPosition());
+
+        // Set the target (setpoint) for the controller
+        turretController.setSetPoint(wrapToPi(headingNeed));
+
+        // Calculate output using FTCLib's PIDF controller
+        // This handles P, I, D, and F calculations automatically with proper timing
+        while (!turretController.atSetPoint()) {
+            turretMovePower = turretController.calculate(degrees);
+        }
+        // Clip to reasonable limits
+        turretMovePower = Range.clip(turretMovePower, -2000, 2000);
+    }
+    private boolean turretAtTarget() {
+        return turretController.atSetPoint();
+    }
+    public static double wrapToPi(double radians) {
+        double twoPi = 2 * Math.PI;
+        double result = radians % twoPi;
+
+        if (result <= -Math.PI) {
+            result += twoPi;
+        } else if (result > Math.PI) {
+            result -= twoPi;
+        }
+
+        return result;
+    }
     public double getAngle(double encoderPosition)
     {
-        double kV = 963/180;
+        double kV = 963/Math.PI;
         return encoderPosition/kV;
     }
 
