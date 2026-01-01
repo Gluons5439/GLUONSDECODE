@@ -67,6 +67,7 @@ public class FlyWheelLogic {
             case LAUNCH:
                 if((flywheelVelocity > closeZoneTargetVelocity || stateTimer.seconds() > maxSpinupTime)&&!transferLogic.isBusy()) {
                     transferLogic.transfer();
+                    transferLogic.update();
                     stateTimer.reset();
                     flywheelState = FlywheelState.RESET_GATE;
                 }

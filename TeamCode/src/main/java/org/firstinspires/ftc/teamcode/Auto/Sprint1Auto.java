@@ -29,7 +29,7 @@ public class Sprint1Auto extends OpMode {
     }
     PathState pathState;
     private final Pose startPose = new Pose(66, 8, Math.toRadians(90));
-    private final Pose shootPose = new Pose(66, 18, Math.toRadians(90));
+    private final Pose shootPose = new Pose(66, 18, Math.toRadians(122));
     private PathChain driveToPreLoadShoot;
     private FlyWheelLogic shooter = new FlyWheelLogic();
     private boolean shotsTriggered = false;
