@@ -19,9 +19,9 @@ public class Constants {
             .mass(10.97694)
             .forwardZeroPowerAcceleration(-37.908619858878616)
             .lateralZeroPowerAcceleration(-77.72622371687503)
-            .translationalPIDFCoefficients(new PIDFCoefficients(0.22,0,0.0002,0.025))
-            .headingPIDFCoefficients(new PIDFCoefficients(2.8,0,0.00001,0.025))
-            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.225,0,0.0001,0.6,0.025))
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.22,0,0.0002,0.022))
+            .headingPIDFCoefficients(new PIDFCoefficients(2.8,0,0.00001,0.022))
+            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.017,0,0.0004,0.6,0.022))
             .centripetalScaling(.0004)
             ;
     public static MecanumConstants driveConstants = new MecanumConstants()
@@ -37,8 +37,8 @@ public class Constants {
             .xVelocity( 43.90869116595411)
             .yVelocity(55.88062292384351);
     public static PinpointConstants localizerConstants = new PinpointConstants()
-            .forwardPodY(-4.72441)
-            .strafePodX(6.3858268)
+            .forwardPodY(-4.65625)
+            .strafePodX(-6.48875)
             .distanceUnit(DistanceUnit.INCH)
             .hardwareMapName("pinpoint")
             .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_SWINGARM_POD)

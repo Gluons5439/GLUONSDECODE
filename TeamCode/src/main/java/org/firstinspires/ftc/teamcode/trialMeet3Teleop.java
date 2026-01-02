@@ -163,7 +163,6 @@ public class trialMeet3Teleop extends OpMode {
             shooterMotor = hardwareMap.get(DcMotorEx.class, "shooterMotor");
             shooterMotor2 = hardwareMap.get(DcMotorEx.class, "shooterMotor2");
             intakeMotor = hardwareMap.get(DcMotor.class, "Intake");
-
             // Set modes once for all
             PIDFCoefficients pidfCoefficentsShooter = new PIDFCoefficients(0.4,0,0,13.2);
             shooterMotor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfCoefficentsShooter);
