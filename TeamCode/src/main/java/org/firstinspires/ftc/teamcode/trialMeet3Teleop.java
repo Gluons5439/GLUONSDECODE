@@ -29,7 +29,7 @@ public class trialMeet3Teleop extends OpMode {
     private Follower follower;
     private final double x = 8;
     private final double y = 66;
-    private final Pose startPose = new Pose(x,y,(Math.PI/2));
+    private final Pose startPose = new Pose(x,y,0);
 
     private final double xf = 120;
     private final double yf = 0;
@@ -291,8 +291,8 @@ public class trialMeet3Teleop extends OpMode {
         telemetry.addData("Heading: ", follower.getHeading());
         telemetry.addData("EncoderTicks: ", turretMoveMotor.getCurrentPosition());
         telemetry.addData("Atan2: ", Math.atan2(dy,dx)*(180/Math.PI));
-        telemetry.addData("shooter: ", shooterMotor.getCurrentPosition());
-        telemetry.addData("shooter2: ", shooterMotor2.getCurrentPosition());
+        telemetry.addData("shooter: ", shooterMotor.getVelocity());
+        telemetry.addData("shooter2: ", shooterMotor2.getVelocity());
 
         telemetry.update();
     }

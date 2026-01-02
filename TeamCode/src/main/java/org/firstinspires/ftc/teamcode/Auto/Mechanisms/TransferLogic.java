@@ -27,10 +27,11 @@ public class TransferLogic {
 
     private ElapsedTime stateTimer = new ElapsedTime();
     public void init(HardwareMap hardwareMap){
-        intakeMotor = hardwareMap.get(DcMotor.class, "intake");
+        intakeMotor = hardwareMap.get(DcMotor.class, "Intake");
         intakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         transferServo = hardwareMap.get(Servo.class, "TransferServo");
         transferServo.setPosition(TRANSFER_DOWN_POS);
+        currentTransferState = TransferState.REST;
 
 
     }
@@ -70,7 +71,7 @@ public class TransferLogic {
                 }
                 break;
         }
-        transferNow = false;
+       transferNow = false;
 
 
     }

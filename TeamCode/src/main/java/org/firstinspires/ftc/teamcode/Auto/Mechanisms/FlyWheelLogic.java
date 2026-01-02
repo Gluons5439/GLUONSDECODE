@@ -32,7 +32,8 @@ public class FlyWheelLogic {
     private double flywheelVelocity = 0;
     private double closeZoneTargetVelocity = 1800;
     private double farZoneTargetVelocity = 2100;
-    private double maxSpinupTime = 2;
+    private double maxSpinupTime = 1.5;
+    private double inbetweenSpinup = 0;
 
     private TransferLogic transferLogic;
 
@@ -55,6 +56,8 @@ public class FlyWheelLogic {
     }
 
     public void update() {
+        transferLogic.update();
+        flywheelVelocity = shooterMotor.getVelocity();
         switch(flywheelState) {
             case IDLE:
                 if(shotsRemaining>0) {
@@ -65,9 +68,13 @@ public class FlyWheelLogic {
                 }
                 break;
             case LAUNCH:
-                if((flywheelVelocity > closeZoneTargetVelocity || stateTimer.seconds() > maxSpinupTime)&&!transferLogic.isBusy()) {
+                if((stateTimer.seconds() > maxSpinupTime)) {
+                    inbetweenSpinup++;
+                    if(inbetweenSpinup>0) {
+                    maxSpinupTime =0.5;
+                    }
                     transferLogic.transfer();
-                    transferLogic.update();
+                    shotsRemaining--;
                     stateTimer.reset();
                     flywheelState = FlywheelState.RESET_GATE;
                 }
@@ -80,11 +87,14 @@ public class FlyWheelLogic {
                     } else {
                         shooterMotor.setVelocity(0);
                         shooterMotor2.setVelocity(0);
+                        maxSpinupTime =2;
+                        inbetweenSpinup =0;
                         flywheelState = flywheelState.IDLE;
                     }
                 }
                 break;
         }
+
     }
     public void fireShots(int numberOfShots)
     {
