@@ -26,12 +26,12 @@ public class TransferLogic {
     private IntakeLogic intake;
 
     private ElapsedTime stateTimer = new ElapsedTime();
-    public void init(HardwareMap hardwareMap){
+    public void init(HardwareMap hardwareMap,IntakeLogic intakeLogic){
         transferServo = hardwareMap.get(Servo.class, "TransferServo");
         transferServo.setPosition(TRANSFER_DOWN_POS);
         currentTransferState = TransferState.REST;
-        intake = new IntakeLogic();
-        intake.init(hardwareMap);
+        intake = intakeLogic;
+//        intake.init(hardwareMap);
 
     }
 

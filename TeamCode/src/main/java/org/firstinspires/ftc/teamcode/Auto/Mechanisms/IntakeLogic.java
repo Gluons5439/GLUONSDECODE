@@ -8,6 +8,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 public class IntakeLogic {
     DcMotor intakeMotor;
     private ElapsedTime timer = new ElapsedTime();
+    public double totalPower =0;
     public void init(HardwareMap hardwareMap){
         intakeMotor = hardwareMap.get(DcMotor.class, "Intake");
         intakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -16,6 +17,7 @@ public class IntakeLogic {
     public void setZaPower(double power)
     {
         intakeMotor.setPower(power);
+        totalPower = power;
     }
     public void set2sec(double power)
     {
@@ -25,5 +27,9 @@ public class IntakeLogic {
             intakeMotor.setPower(power);
         }
         intakeMotor.setPower(0);
+    }
+    public double getZaPower()
+    {
+        return totalPower;
     }
 }

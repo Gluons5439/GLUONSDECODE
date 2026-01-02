@@ -37,12 +37,12 @@ public class FlyWheelLogic {
 
     private TransferLogic transferLogic;
 
-    public void init(HardwareMap hardwareMap) {
+    public void init(HardwareMap hardwareMap, IntakeLogic intakeLogic) {
         shooterMotor = hardwareMap.get(DcMotorEx.class, "shooterMotor");
         shooterMotor2 = hardwareMap.get(DcMotorEx.class, "shooterMotor2");
         transferServo = hardwareMap.get(Servo.class, "TransferServo");
         transferLogic = new TransferLogic();
-        transferLogic.init(hardwareMap);
+        transferLogic.init(hardwareMap, intakeLogic);
         PIDFCoefficients pidfCoefficentsShooter = new PIDFCoefficients(0.4,0,0,13.2);
         shooterMotor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfCoefficentsShooter);
         shooterMotor2.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfCoefficentsShooter);

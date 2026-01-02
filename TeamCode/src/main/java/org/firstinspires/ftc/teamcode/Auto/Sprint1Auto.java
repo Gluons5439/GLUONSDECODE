@@ -108,16 +108,19 @@ public class Sprint1Auto extends OpMode {
                 break;
 
             case COLLECT:
-                intake.setZaPower(0.9);
                 if (!pathStarted) {
                     follower.followPath(collectBallSet1, 0.5, true);
+                    pathTimer.resetTimer();
+                    intake.setZaPower(0.9);
                     pathStarted = true;
                 }
 
-                if (!follower.isBusy()) {
+                if (pathTimer.getElapsedTimeSeconds() > 1.5) {
+                    intake.setZaPower(0);
                     setPathState(PathState.SHOOT_SET_1);
                 }
                 break;
+
 
             case SHOOT_SET_1:
 
@@ -165,7 +168,7 @@ public class Sprint1Auto extends OpMode {
         opModeTimer = new Timer();
         follower = Constants.createFollower(hardwareMap);
         shooter = new FlyWheelLogic();
-        shooter.init(hardwareMap);
+        shooter.init(hardwareMap, intake);
 
 
         buildPaths();
@@ -185,6 +188,7 @@ public class Sprint1Auto extends OpMode {
         telemetry.addData("Path state: ", pathState.toString());
         telemetry.addData("x", follower.getPose().getX());
         telemetry.addData("y", follower.getPose().getY());
+        telemetry.addData("intake power", intake.getZaPower());
 
 
     }
