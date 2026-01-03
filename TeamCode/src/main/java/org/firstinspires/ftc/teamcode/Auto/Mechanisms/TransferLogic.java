@@ -34,7 +34,12 @@ public class TransferLogic {
 //        intake.init(hardwareMap);
 
     }
-
+    public void fah(double pow) {
+        stateTimer.reset();
+        while(stateTimer.seconds()<=1.5) {
+            intake.setZaPower(0.9);
+        }
+    }
     public void update() {
 
         switch (currentTransferState) {

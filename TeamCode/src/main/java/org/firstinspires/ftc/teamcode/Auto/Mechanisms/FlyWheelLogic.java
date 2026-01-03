@@ -30,8 +30,8 @@ public class FlyWheelLogic {
 
     private int shotsRemaining = 0;
     private double flywheelVelocity = 0;
-    private double closeZoneTargetVelocity = 1800;
-    private double farZoneTargetVelocity = 2100;
+    private double closeZoneTargetVelocity = 1850;
+    private double farZoneTargetVelocity = 2200;
     private double maxSpinupTime = 1.5;
     private double inbetweenSpinup = 0;
 

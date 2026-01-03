@@ -22,17 +22,17 @@ import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 @Configurable
-@TeleOp(name = "Blue-AutoAim-Teleop")
-public class trialMeet3Teleop extends OpMode {
+@TeleOp(name = "Red-AutoAim-Teleop")
+public class RedTeleop extends OpMode {
 
     // --- Pedro Pathing V2 Variables ---
     private Follower follower;
-    private final double x = 8;
-    private final double y = 66;
-    private final Pose startPose = new Pose(x,y,Math.PI);
+    private final double x = 80;
+    private final double y = 8;
+    private final Pose startPose = new Pose(x,y,0);
 
-    private final double xf = 144;
-    private final double yf = 0;
+    private final double xf = 140;
+    private final double yf = 144;
     double dx;
     double dy;
     // --- Turret System Variables (CR Simulation) ---
@@ -113,12 +113,12 @@ public class trialMeet3Teleop extends OpMode {
 
 
         try {
-           // turretServo1 = hardwareMap.get(CRServo.class, "turretServo1");
-           // turretServo2 = hardwareMap.get(CRServo.class, "turretServo2");
-           // turretServo1.setPower(0);
-           // turretServo2.setPower(0);
-           // turretServo1.setDirection(DcMotorSimple.Direction.REVERSE);
-           // turretServo2.setDirection(DcMotorSimple.Direction.REVERSE);
+            // turretServo1 = hardwareMap.get(CRServo.class, "turretServo1");
+            // turretServo2 = hardwareMap.get(CRServo.class, "turretServo2");
+            // turretServo1.setPower(0);
+            // turretServo2.setPower(0);
+            // turretServo1.setDirection(DcMotorSimple.Direction.REVERSE);
+            // turretServo2.setDirection(DcMotorSimple.Direction.REVERSE);
             turretMoveMotor = hardwareMap.get(DcMotorEx.class, "turretMotor");
             turretMoveMotor.setDirection(DcMotorSimple.Direction.FORWARD);
             turretMoveMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -128,7 +128,7 @@ public class trialMeet3Teleop extends OpMode {
             turretController = new PIDController(kP, kI, kD);
             turretController.setTolerance(0.5,1); // 2 degree tolerance
             //turretMoveMotor.setPower(0); // see if this is okay
-           // turretMoveMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            // turretMoveMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
             PIDFCoefficients pidfCoefficentsShooter = new PIDFCoefficients(0.4,0,0,13.2);
             shooterMotor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfCoefficentsShooter);
@@ -164,7 +164,7 @@ public class trialMeet3Teleop extends OpMode {
             shooterMotor2 = hardwareMap.get(DcMotorEx.class, "shooterMotor2");
             intakeMotor = hardwareMap.get(DcMotor.class, "Intake");
             // Set modes once for all
-            PIDFCoefficients pidfCoefficentsShooter = new PIDFCoefficients(0.7,0,0,14.6);
+            PIDFCoefficients pidfCoefficentsShooter = new PIDFCoefficients(0.4,0,0,13.2);
             shooterMotor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfCoefficentsShooter);
             shooterMotor2.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfCoefficentsShooter);
             shooterMotor.setDirection(DcMotorSimple.Direction.FORWARD);
@@ -257,10 +257,10 @@ public class trialMeet3Teleop extends OpMode {
         }
 
 // Apply the calculated 'power' position to the CR servos
-            //turretServo1.setPower(-turretMovePower);
-            //turretServo2.setPower(-turretMovePower);
+        //turretServo1.setPower(-turretMovePower);
+        //turretServo2.setPower(-turretMovePower);
 
-       turretMoveMotor.setVelocity(turretMovePower);
+        turretMoveMotor.setVelocity(turretMovePower);
 
 // --- MECHANISM CONTROL ---
         handleShooterControl();     // Gamepad 2 B (Toggle)
@@ -380,8 +380,8 @@ public class trialMeet3Teleop extends OpMode {
 
     private void handleAutoTurretControl(){
         dx = xf-follower.getPose().getX();
-        dy = (144-yf)-(follower.getPose().getY());
-        headingNeed = ((Math.PI/2) + Math.atan2(dy,dx) - follower.getHeading()) * 180/Math.PI;
+        dy = (yf)-(follower.getPose().getY());
+        headingNeed = (Math.atan2(dy, dx) - follower.getHeading()) * 180/Math.PI;
         degrees = getAngle(turretMoveMotor.getCurrentPosition());
         error = headingNeed - degrees;
         integralSum += (error * timer.seconds());

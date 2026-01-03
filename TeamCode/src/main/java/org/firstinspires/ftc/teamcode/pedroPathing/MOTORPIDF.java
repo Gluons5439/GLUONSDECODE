@@ -12,9 +12,9 @@ public class MOTORPIDF extends OpMode{
     public DcMotorEx flywheelMotor1;
     public DcMotorEx flywheelMotor2;
 
-    public double highVelocity = 1500;
+    public double highVelocity = 2200;
 
-    public double lowVelocity = 900;
+    public double lowVelocity = 1850;
 
     double curTargetVelocity = highVelocity;
 
