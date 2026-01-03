@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.trialMeet3Teleop;
+import org.firstinspires.ftc.teamcode.BlueTeleop;
 
 public class TransferLogic {
     private enum TransferState {
@@ -34,11 +34,12 @@ public class TransferLogic {
 //        intake.init(hardwareMap);
 
     }
-    public void fah(double pow) {
+    public void fah(double time) {
         stateTimer.reset();
-        while(stateTimer.seconds()<=1.5) {
+        while(stateTimer.seconds()<=time) {
             intake.setZaPower(0.9);
         }
+        intake.setZaPower(0);
     }
     public void update() {
 

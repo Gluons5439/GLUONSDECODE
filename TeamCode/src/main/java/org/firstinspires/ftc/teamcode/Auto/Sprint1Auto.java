@@ -119,7 +119,7 @@ public class Sprint1Auto extends OpMode {
                     pathStarted = true;
                 }
 
-                if (pathTimer.getElapsedTimeSeconds() > 1.5) {
+                if (pathTimer.getElapsedTimeSeconds() >= 1.5) {
                     intake.setZaPower(0);
                     setPathState(PathState.SHOOT_SET_1);
                 }
@@ -216,6 +216,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.Auto.Mechanisms.FlyWheelLogic;
 import org.firstinspires.ftc.teamcode.Auto.Mechanisms.IntakeLogic;
+import org.firstinspires.ftc.teamcode.Auto.Mechanisms.TransferLogic;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 @Autonomous(name = "Sprint1", group = "Examples")
@@ -224,6 +225,7 @@ public class Sprint1Auto extends OpMode {
     private Timer pathTimer, opModeTimer;
     DcMotorEx turretMoveMotor;
     private IntakeLogic intake;
+    private TransferLogic transfer;
 
     private Servo StopperServo;
     private static final double STOPPER_DOWN_POS = 0.267;
@@ -319,7 +321,7 @@ public class Sprint1Auto extends OpMode {
                     pathTimer.resetTimer();
                     pathStarted = true;
                 }
-
+                /*
                 // Keep intake running continuously while in COLLECT state
                 intake.setZaPower(0.9);
 
@@ -328,6 +330,14 @@ public class Sprint1Auto extends OpMode {
                     intake.setZaPower(0);
                     setPathState(PathState.SHOOT_SET_1);
                 }
+
+                 */
+                transfer.fah(1.5);
+                if(!follower.isBusy()) {
+                    setPathState(PathState.SHOOT_SET_1);
+                }
+
+
                 break;
 
             case SHOOT_SET_1:
